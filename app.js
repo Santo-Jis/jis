@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, set, push, get, onValue, update, remove, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, push, get, onValue, update, remove, runTransaction, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // ══════════════════════════════════════════════════
 //  NovaTEch BD — App Engine v4.1
@@ -340,15 +340,30 @@ function initApp(){
 
   // ✅ সব listener unsubscribe function রাখি — logout এ বন্ধ করব
   _unsubs.push(
-    onValue(ref(db,'sales'),s=>{allSales=s.val()||{};computeSalesCache();syncGlobals();refreshDash();renderSaleList();renderDue();if(CR==='admin')renderReport();renderProfile();
-      // ✅ Worker dashboard — allSales update হলে due refresh
-      if(CR==='worker'&&typeof window._wdSetPeriod==='function'){
-        clearTimeout(window._wdDueTimer);
-        window._wdDueTimer=setTimeout(()=>window._wdSetPeriod(window._wdPeriod||'1'),300);
+    // ✅ ROLE-BASED QUERY: Worker শুধু নিজের sales পাবে, Admin/Manager সব পাবে
+    onValue(
+      CR==='worker'
+        ? query(ref(db,'sales'), orderByChild('uid'), equalTo(CU.uid))
+        : ref(db,'sales'),
+      s=>{
+        allSales=s.val()||{};
+        computeSalesCache();syncGlobals();refreshDash();renderSaleList();renderDue();
+        if(CR==='admin')renderReport();
+        renderProfile();
+        if(CR==='worker'&&typeof window._wdSetPeriod==='function'){
+          clearTimeout(window._wdDueTimer);
+          window._wdDueTimer=setTimeout(()=>window._wdSetPeriod(window._wdPeriod||'1'),300);
+        }
+        if(typeof window.drawDashboardCharts==='function') setTimeout(window.drawDashboardCharts,200);
       }
-      if(typeof window.drawDashboardCharts==='function') setTimeout(window.drawDashboardCharts,200);
-    }),
-    onValue(ref(db,'expenses'),s=>{allExpenses=s.val()||{};refreshDash();renderExpList();if(CR==='admin')renderReport();}),
+    ),
+    // ✅ ROLE-BASED QUERY: Worker শুধু নিজের expenses পাবে
+    onValue(
+      CR==='worker'
+        ? query(ref(db,'expenses'), orderByChild('uid'), equalTo(CU.uid))
+        : ref(db,'expenses'),
+      s=>{allExpenses=s.val()||{};refreshDash();renderExpList();if(CR==='admin')renderReport();}
+    ),
     onValue(ref(db,'products'),s=>{allProducts=s.val()||{};loadProductSelects();if(CR==='admin')renderProdChips();}),
     onValue(ref(db,'users'),s=>{allUsers=s.val()||{};window.allUsers=allUsers;syncGlobals();if(CR==='admin'||CR==='manager')renderUserList();loadAllWorkerSelects();}),
     onValue(ref(db,'allowances'),s=>{allAllowances=s.val()||{};renderMyAllowance();if(CR!=='worker')renderAllowList();}),
