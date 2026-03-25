@@ -777,7 +777,42 @@
       window._ntwT = setTimeout(() => render(), 350);
     }
   };
+// worker-dashboard.js এর হাজিরা রেন্ডার ফাংশন
+function renderAttendanceStep() {
+    const isCheckedIn = window.todayAttendance; // Firebase থেকে আসা ডাটা
+    const now = new Date();
+    const hr = now.getHours();
+    
+    // ৯টার পর বাটন আসবে, ১০টার পর লেট লজিক
+    const canShowPopup = hr >= 9;
+    const isLate = hr >= 10;
 
+    return `
+    <div class="worker-step-card" style="border-left-color: ${isCheckedIn ? 'var(--green)' : (isLate ? 'var(--red)' : 'var(--accent)')};">
+        <div class="step-header">
+            <span><span class="step-number">১</span> <b class="step-title">সকালের হাজিরা</b></span>
+            <span class="step-badge ${isCheckedIn ? 'badge-done' : 'badge-required'}">
+                ${isCheckedIn ? '✓ সম্পন্ন' : 'বাকি আছে'}
+            </span>
+        </div>
+        
+        ${!isCheckedIn ? `
+            <p style="font-size: 12px; color: var(--muted); margin-bottom: 10px;">
+                ${isLate ? '⚠️ ১০টা বেজে গেছে! আপনার হাজিরা "দেরি" হিসেবে গণ্য হবে।' : '🕘 ৯টা বেজেছে, দ্রুত হাজিরা সম্পন্ন করুন।'}
+            </p>
+            ${canShowPopup ? `
+                <button class="btn-main btn-blue" onclick="showCheckinPopup()">
+                    📸 সেলফি ও লোকেশন দিন
+                </button>
+            ` : `<p style="font-size: 11px; color: var(--muted);">🕘 সকাল ৯টার আগে হাজিরা দেওয়া যাবে না।</p>`}
+        ` : `
+            <div style="color: var(--green); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                ✅ হাজিরা দেওয়া হয়েছে (${new Date(isCheckedIn.checkIn).toLocaleTimeString('bn-BD')})
+            </div>
+        `}
+    </div>
+    `;
+}
   // ─────────────────────────────────────────
   //  INIT
   // ─────────────────────────────────────────
